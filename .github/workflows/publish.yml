@@ -1,0 +1,46 @@
+name: Publish package
+
+# Publishes @sneat/extension-template-contract — the contract surface a
+# scaffolded ext-<id> repo publishes as @sneat/extension-<id>-contract.
+#
+# This repo is the template for ext-<id> (the public extension-definition repo).
+# It publishes for real because sneat-ext-template consumes the published
+# package rather than a local copy: "the implementation never copies contract
+# source, it consumes the published contract package just as another extension
+# would". A template that can't install is not a working reference.
+
+on:
+  workflow_dispatch:
+    inputs:
+      specifier:
+        description: >-
+          Explicit version for a seed release (e.g. 0.1.0). Leave blank to let
+          conventional commits pick the bump. Needed once per repo: with no git
+          tag to resolve from, nx falls back to the manifest and bumps from
+          there, so the first release lands wherever that maths says rather than
+          where you want it.
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish.yml'
+
+jobs:
+  publish:
+    uses: sneat-co/cicd/.github/workflows/npm-publish.yml@main
+    with:
+      working-directory: frontend
+      build-command: pnpm exec nx build ext-template-contract
+      # `inputs.specifier` is empty on push, so this is a plain conventional-
+      # commits release there and an explicit one on demand.
+      publish-command: pnpm exec nx release ${{ inputs.specifier }} --yes && git push --follow-tags
+    # Required, and easy to omit: npm-publish.yml reads secrets.NPM_TOKEN, and a
+    # called workflow receives NO secrets — not even org-level ones — unless the
+    # caller passes them. Without this the publish runs unauthenticated and npm
+    # answers E404 on the PUT (it hides package existence from unauthorized
+    # callers) rather than a 403 that would name the real problem. That exact
+    # omission kept ext-debtus and ext-splitus unpublished and broke debtus.app's
+    # deploys for two days.
+    secrets: inherit
