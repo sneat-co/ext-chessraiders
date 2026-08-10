@@ -1,4 +1,2 @@
-node_modules/
-frontend/dist/
-frontend/.nx/
-frontend/.angular/
+.DS_Store
+specscore.local.yaml
