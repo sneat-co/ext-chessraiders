@@ -12,7 +12,12 @@ type IdentityProvider string
 
 const (
 	IdentityProviderCrazyGames IdentityProvider = "crazygames"
-	IdentityProviderItchIO     IdentityProvider = "itch.io"
+	// IdentityProviderItchIO is deliberately "itch-io", not "itch.io" — it
+	// matches the stable registry key already live in the private
+	// implementation (sneat-co/chessraiders' api4chess.ExternalIdentity.Provider
+	// and sneat-go's chessExternalIdentityProviders allow-list), not the
+	// provider's own dotted brand name.
+	IdentityProviderItchIO IdentityProvider = "itch-io"
 )
 
 // ExternalIdentity is what a portal or external provider vouches for after
