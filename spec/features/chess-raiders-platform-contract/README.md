@@ -129,6 +129,33 @@ the full exclusion list and reasoning per exclusion.
   `PortalSessionApplication` do not. **Ask:** is that an acceptable first
   release, or does the founder want conformance coverage for all four
   interfaces before this Feature can move past `Implementing`?
+- **OQ-4: `IdentityLinkApplication.ResolveExternalIdentity` cannot resolve a
+  link-only identity, and this exposed a pre-existing gap in `sneat-go`'s
+  private `linkExternalIdentity`.** Wiring `NewIdentityLinkApplication`
+  (`sneat-co/sneat-go`, `pkg/modules/chess/provide_chess_internal.go`) against
+  the real `linkExternalIdentity`/`resolveExternalUser` functions surfaced two
+  related facts neither function's own existing test suite exercised:
+  (1) `linkExternalIdentity` writes only the target user's own account list —
+  it never writes a record at the identity's deterministic ID the way a
+  sign-in does — so an identity attached ONLY via `LinkExternalIdentity`
+  (never separately signed in) cannot be resolved back to its user by any
+  deterministic-ID lookup; the platform has no `AccountKey`-indexed query to
+  fall back to. (2) The same gap means `linkExternalIdentity`'s
+  account-takeover guard only catches a collision when the CONTESTED identity
+  was itself previously established via sign-in — two different Sneat users
+  can both successfully link the SAME external identity to their own accounts
+  as long as neither ever signs in with it, undetected. This is disclosed in
+  `NewIdentityLinkApplication`'s doc comment and covered by
+  `sneat-go`'s `TestIdentityLinkAdapterLinkOnlyIdentityIsNotYetResolvable`
+  (asserting the current, limited behaviour, not a desired one). **Ask:**
+  should `sneat-go` gain an `AccountKey`-indexed lookup (closing both gaps at
+  once), and does finding (2) — a real account-takeover gap in code that has
+  been live since the CrazyGames/itch.io portal-identity launch — warrant a
+  `sneat-co/backstage/LESSONS-LEARNED.md` entry ("what should have caught
+  this, and why didn't it": the existing `linkExternalIdentity` test suite
+  only ever seeds the contested identity via `resolveExternalUser`, never via
+  a bare `LinkExternalIdentity` with no prior sign-in, so the gap had no test
+  path to surface through until this contract's own tests exercised it)?
 
 ---
 *This document follows the https://specscore.md/feature-specification*
