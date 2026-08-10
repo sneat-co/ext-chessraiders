@@ -18,7 +18,7 @@ func (matchLobbyApplicationStub) CreateLobby(context.Context, contract4chessraid
 	return contract4chessraiders.LobbyView{}, nil
 }
 
-func (matchLobbyApplicationStub) Join(context.Context, string, contract4chessraiders.Player, contract4chessraiders.Side) (contract4chessraiders.LobbyView, error) {
+func (matchLobbyApplicationStub) Join(context.Context, string, contract4chessraiders.Player) (contract4chessraiders.LobbyView, error) {
 	return contract4chessraiders.LobbyView{}, nil
 }
 

@@ -56,7 +56,6 @@ func (a *memoryLobbyApplication) Join(
 	_ context.Context,
 	matchID string,
 	joiner contract4chessraiders.Player,
-	side contract4chessraiders.Side,
 ) (contract4chessraiders.LobbyView, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -68,7 +67,7 @@ func (a *memoryLobbyApplication) Join(
 		return contract4chessraiders.LobbyView{}, contract4chessraiders.ErrNotInLobby
 	}
 	seat := contract4chessraiders.LobbySeat{UserID: joiner.UserID, DisplayName: joiner.DisplayName}
-	switch side {
+	switch joiner.Side {
 	case contract4chessraiders.SideWhite:
 		match.white = append(match.white, seat)
 	case contract4chessraiders.SideBlack:
@@ -122,6 +121,9 @@ func (a *memoryLobbyApplication) VoteReady(
 	return a.viewLocked(matchID, match, callerUserID), nil
 }
 
+// Start is deliberately NOT creator-gated — any joined, ready player may
+// trigger it, matching the real facade4chess.Service.Start rule this
+// reference implementation exists to approximate.
 func (a *memoryLobbyApplication) Start(_ context.Context, matchID, callerUserID string) (contract4chessraiders.LobbyView, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -129,8 +131,8 @@ func (a *memoryLobbyApplication) Start(_ context.Context, matchID, callerUserID 
 	if !ok {
 		return contract4chessraiders.LobbyView{}, contract4chessraiders.ErrMatchNotFound
 	}
-	if match.createdBy != callerUserID {
-		return contract4chessraiders.LobbyView{}, contract4chessraiders.ErrNotCreator
+	if !seatedIn(match.white, callerUserID) && !seatedIn(match.black, callerUserID) {
+		return contract4chessraiders.LobbyView{}, contract4chessraiders.ErrPlayerNotFound
 	}
 	if len(match.white) == 0 || len(match.black) == 0 {
 		return contract4chessraiders.LobbyView{}, contract4chessraiders.ErrTeamsNotViable
@@ -164,6 +166,15 @@ func (a *memoryLobbyApplication) viewLocked(matchID string, match *memoryMatch, 
 		Black:         match.black,
 		ViewerIsReady: match.ready[viewer],
 	}
+}
+
+func seatedIn(seats []contract4chessraiders.LobbySeat, userID string) bool {
+	for _, seat := range seats {
+		if seat.UserID == userID {
+			return true
+		}
+	}
+	return false
 }
 
 func itoa(n int) string {

@@ -56,8 +56,8 @@ func CheckMatchLobbyApplication(factory MatchLobbyApplicationFactory) []error {
 		violations = append(violations, errors.New("start with one side seated succeeded, want ErrTeamsNotViable or similar"))
 	}
 
-	opponent := contract4chessraiders.Player{UserID: "opponent", DisplayName: "Opponent"}
-	joined, err := app.Join(ctx, lobby.MatchID, opponent, contract4chessraiders.SideBlack)
+	opponent := contract4chessraiders.Player{UserID: "opponent", DisplayName: "Opponent", Side: contract4chessraiders.SideBlack}
+	joined, err := app.Join(ctx, lobby.MatchID, opponent)
 	if err != nil {
 		violations = append(violations, fmt.Errorf("join: %w", err))
 	} else if len(joined.Black) != 1 || joined.Black[0].UserID != opponent.UserID {
@@ -76,21 +76,19 @@ func CheckMatchLobbyApplication(factory MatchLobbyApplicationFactory) []error {
 		violations = append(violations, fmt.Errorf("opponent vote ready: %w", err))
 	}
 
-	// Only the creator may start the match.
-	if _, err := app.Start(ctx, lobby.MatchID, opponent.UserID); !errors.Is(err, contract4chessraiders.ErrNotCreator) {
-		violations = append(violations, fmt.Errorf("start by non-creator error = %v, want ErrNotCreator", err))
-	}
-
-	started, err := app.Start(ctx, lobby.MatchID, creator.UserID)
+	// Start is deliberately NOT creator-gated: any joined, ready player may
+	// trigger it once the teams are viable and everyone is ready — so the
+	// non-creator opponent starting here must succeed, not fail.
+	started, err := app.Start(ctx, lobby.MatchID, opponent.UserID)
 	if err != nil {
-		violations = append(violations, fmt.Errorf("start: %w", err))
+		violations = append(violations, fmt.Errorf("start by a non-creator, ready player: %w", err))
 	} else if started.Lifecycle == contract4chessraiders.LifecycleLobby {
 		violations = append(violations, fmt.Errorf("start: Lifecycle stayed %v", started.Lifecycle))
 	}
 
 	// A match no longer in the lobby stage must reject a second join.
-	stranger := contract4chessraiders.Player{UserID: "stranger", DisplayName: "Stranger"}
-	if _, err := app.Join(ctx, lobby.MatchID, stranger, contract4chessraiders.SideWhite); !errors.Is(err, contract4chessraiders.ErrNotInLobby) {
+	stranger := contract4chessraiders.Player{UserID: "stranger", DisplayName: "Stranger", Side: contract4chessraiders.SideWhite}
+	if _, err := app.Join(ctx, lobby.MatchID, stranger); !errors.Is(err, contract4chessraiders.ErrNotInLobby) {
 		violations = append(violations, fmt.Errorf("join after start error = %v, want ErrNotInLobby", err))
 	}
 
